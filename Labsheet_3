@@ -1,0 +1,153 @@
+- Q1
+    - (a)
+        - ALTER TYPE stock_t 
+	ADD MEMBER FUNCTION yieldOfStocks
+		RETURN FLOAT
+		CASCADE;
+/
+
+CREATE OR REPLACE TYPE BODY stock_t AS
+	MEMBER FUNCTION yieldOfStocks
+		RETURN FLOAT IS
+			BEGIN
+				RETURN (SELF.LASTDIVIDEND/SELF.CURPRICE) * 100;
+			END yieldOfStocks;
+END;
+/
+
+SELECT s.company, s.yieldOfStocks() AS Yield_Of_Stocks
+FROM stocks s;
+/
+    - 
+    - (b)
+        - ALTER TYPE stock_t
+	ADD MEMBER FUNCTION AUDtoUSD(rate FLOAT)
+		RETURN FLOAT
+		CASCADE;
+/
+
+CREATE OR REPLACE TYPE BODY stock_t AS
+    MEMBER FUNCTION yieldOfStocks
+	RETURN FLOAT IS
+	BEGIN
+		RETURN (SELF.LASTDIVIDEND/SELF.CURPRICE) * 100;
+	END yieldOfStocks;
+
+    MEMBER FUNCTION AUDtoUSD(rate FLOAT)
+	RETURN FLOAT IS
+	BEGIN
+		RETURN SELF.CURPRICE * rate;
+	END AUDtoUSD;
+END;
+/
+    
+SELECT s.COMPANY, s.CURPRICE, s.AUDtoUSD(100) AS Price_In_USD
+FROM Stocks s;
+/
+    - 
+    - (c)
+        - ALTER TYPE stock_t 
+	ADD MEMBER FUNCTION countExchangesTraded
+		RETURN NUMBER
+		CASCADE;
+/
+
+CREATE OR REPLACE TYPE BODY stock_t AS
+    MEMBER FUNCTION yieldOfStocks
+	RETURN FLOAT IS
+	    BEGIN
+		RETURN (SELF.LASTDIVIDEND/SELF.CURPRICE) * 100;
+	    END yieldOfStocks;
+
+	MEMBER FUNCTION AUDtoUSD(rate FLOAT)
+		RETURN FLOAT IS
+			BEGIN
+				RETURN SELF.CURPRICE * rate;
+			END AUDtoUSD;
+
+	MEMBER FUNCTION countExchangesTraded
+	        RETURN NUMBER IS
+	            BEGIN
+	                RETURN SELF.exTraded.count;
+	            END countExchangesTraded;
+END;
+/
+
+SELECT s.countExchangesTraded() AS No_Of_Exchanges
+FROM stocks s
+WHERE s.company = 'IBM';
+    - 
+    - (d)
+        - ALTER TYPE Clients_t
+	ADD MEMBER FUNCTION computePurchaseValue
+		RETURN FLOAT
+		CASCADE;
+/
+
+CREATE OR REPLACE TYPE BODY Clients_t AS
+	MEMBER FUNCTION computePurchaseValue
+		RETURN FLOAT IS
+    		pvalue FLOAT;
+			BEGIN
+                SELECT sum(i.purchasePrice * i.quantity) INTO pvalue
+                FROM TABLE(SELF.investments) i;
+				RETURN pvalue;
+			END computePurchaseValue;
+END;
+/
+
+SELECT c.fname, i.purchasePrice, i.quantity, c.computePurchaseValue() AS Tot_Value
+FROM Clients c, TABLE(c.investments) i;
+    - 
+    - (e)
+        - ALTER TYPE Clients_t
+	ADD MEMBER FUNCTION computeTotPrice
+		RETURN FLOAT
+		CASCADE;
+/
+
+CREATE OR REPLACE TYPE BODY Clients_t AS
+	MEMBER FUNCTION computePurchaseValue
+		RETURN FLOAT IS
+    		pvalue FLOAT;
+			BEGIN
+                SELECT sum(i.purchasePrice * i.quantity) INTO pvalue
+                FROM TABLE(SELF.investments) i;
+				RETURN pvalue;
+			END computePurchaseValue;
+
+	MEMBER FUNCTION computeTotPrice
+		RETURN FLOAT IS
+        	profit FLOAT;
+            BEGIN
+    			select sum((s.curPrice - i.purchasePrice) * i.quantity) INTO profit
+            	from Clients c, Stocks s, table(c.investments) i
+        		GROUP BY c.fname;
+            END computeTotPrice;
+END;
+/
+
+- 
+- Q2
+    - (a)
+        - SELECT s.company, e.COLUMN_VALUE AS exchange, s.yieldOfStocks() AS yield, s.AUDtoUSD(0.74) AS price_in_usd
+FROM stocks s, TABLE(s.exTraded) e;
+    - 
+    - (b)
+        - SELECT s.company, s.curPrice, s.countExchangesTraded() AS no_of_exchanges
+FROM stocks s, TABLE(s.exTraded) e
+WHERE s.countExchangesTraded()>1;
+    - 
+    - (c)
+        - SELECT c.fname, i.company.company AS STOCK_NAME, s.yieldOfStocks() AS yield, s.curPrice, s.eps 
+FROM clients c, TABLE(c.investments) i, stocks s
+WHERE i.company.company = s.company;
+    - 
+    - (d)
+        - SELECT c.fname, c.computePurchaseValue() AS total_purchase_vlaue
+FROM clients c;
+    - 
+    - (e)
+        - SELECT distinct c.fname, c.computeTotPrice() AS total_profit
+FROM clients c;
+-
