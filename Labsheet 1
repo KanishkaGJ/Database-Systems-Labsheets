@@ -1,0 +1,84 @@
+- Q1
+    - CREATE TABLE client(
+    clno CHAR(3),
+    name VARCHAR2(12),
+    address VARCHAR2(30),
+    PRIMARY KEY(clno)
+)
+/
+
+CREATE TABLE stock(
+    company CHAR(7),
+    price NUMBER(6,2),
+    dividend NUMBER(4,2),
+    eps NUMBER(4,2),
+    PRIMARY KEY(company)
+)
+/
+
+CREATE TABLE trading(
+    company CHAR(7),
+    exchange VARCHAR2(12),
+    PRIMARY KEY(company, exchange),
+    FOREIGN KEY(company) REFERENCES stock(company)
+)
+/
+
+CREATE TABLE purchase(
+    clno CHAR(3),
+    company CHAR(7),
+    pdate DATE,
+    qty NUMBER(6),
+    price NUMBER(6,2),
+    PRIMARY KEY(clno, company, pdate),
+    FOREIGN KEY(clno) REFERENCES client(clno),
+    FOREIGN KEY(company) REFERENCES stock(company)
+)
+/
+- 
+- Q2
+    - INSERT INTO client VALUES ('c01', 'John Smith', '3 East Av, Bentley, WA 6102');
+INSERT INTO client VALUES ('c02', 'Jill Brody', '42 Bent St, Perth, WA 6001');
+
+INSERT INTO stock VALUES ('BHP', 10.50, 1.50, 3.20);
+INSERT INTO stock VALUES ('IBM', 70.00, 4.25, 10.00);
+
+INSERT INTO trading VALUES ('BHP', 'Sydney');
+INSERT INTO trading VALUES ('BHP', 'New York');
+INSERT INTO trading VALUES ('IBM', 'New York');
+INSERT INTO trading VALUES ('IBM', 'London');
+INSERT INTO trading VALUES ('IBM', 'Tokyo');
+
+INSERT INTO purchase VALUES ('c02', 'BHP', '02-OCT-2001', 1000, 12.00);
+INSERT INTO purchase VALUES ('c02', 'BHP', '08-JUN-2002', 2000, 10.50);
+- 
+- Q3
+    - (a)
+        - select c.name, p.company, s.price, s.dividend, s.eps
+from client c, purchase p, stock s
+where c.clno = p.clno and p.company = s.company
+    - (b)
+        - select c.name, p.company, sum(p.qty) AS total_qty, sum(p.qty*p.price)/sum(p.qty) AS app
+from client c, purchase p
+where c.clno = p.clno
+group by c.name, p.company
+    - (c)
+        - SELECT t.company AS stock_name, c.name AS client_name, p.qty AS shares_held, p.qty * s.price AS current_value
+FROM trading t
+JOIN purchase p ON t.company = p.company
+JOIN stock s ON p.company = s.company
+JOIN client c ON p.clno = c.clno
+WHERE t.exchange = 'NYSE';
+
+    - (d)
+        - SELECT c.name AS client_name, SUM(p.qty * p.price) AS total_purchase_value
+FROM client c
+JOIN purchase p ON c.clno = p.clno
+GROUP BY c.name;
+
+    - (e)
+        - SELECT c.name AS client_name, SUM(p.qty * s.price) - SUM(p.qty * p.price) AS book_profit_loss
+FROM client c
+JOIN purchase p ON c.clno = p.clno
+JOIN stock s ON p.company = s.company
+GROUP BY c.name;
