@@ -1,0 +1,70 @@
+
+-- explaining code 
+explain plan for  
+select e.lastname, d.mgrno 
+from emp e, dept d 
+where d.admrdept='A00' and e.workdept=d.deptno
+/
+
+@"C:\location\UTLXPLS.SQL"
+/
+
+--4
+CREATE INDEX XWORKDEPT ON emp(workdept)
+/
+-- plan does not change
+
+--5
+CREATE INDEX XADMRDEPT ON dept(admrdept)
+/
+
+
+--6
+explain plan for  
+select e.lastname, d.mgrno 
+from emp e, dept d 
+where d.admrdept='A00' and e.workdept=d.deptno and e.job='DESIGNER' 
+/
+
+@"C:\location\UTLXPLS.SQL"
+/
+
+CREATE INDEX XJOB ON emp(job)
+/
+
+explain plan for  
+select e.lastname, d.mgrno 
+from emp e, dept d 
+where d.admrdept='A00' and e.workdept=d.deptno and e.job='DESIGNER' 
+/
+
+@"C:\location\UTLXPLS.SQL"
+/
+
+
+
+--7
+explain plan for  
+select avg(e.salary) 
+from emp e 
+where e.edlevel>10 and e.salary between 30000 and 70000
+/
+
+@"C:\location\UTLXPLS.SQL"
+/
+
+CREATE INDEX XEDLEVEL ON  emp(edlevel)
+/
+
+CREATE INDEX XSALARY ON emp(salary)
+/
+
+
+--8
+Select index_name 
+From user_indexes 
+Where table_name = 'EMP'
+/
+
+describe user_indexes
+
