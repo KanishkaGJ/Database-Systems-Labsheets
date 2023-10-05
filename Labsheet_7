@@ -1,0 +1,120 @@
+DROP table courses
+/
+DROP TABLE students
+/
+DROP TYPE student_t
+/
+DROP TYPE grades_nt
+/
+DROP TYPE grade_t
+/
+DROP TYPE elective_t
+/
+
+DROP TYPE course_t
+/
+
+CREATE TYPE course_t AS OBJECT(
+  cid CHAR(10),
+  cname VARCHAR2(50),
+  credits NUMBER
+) 
+/
+
+CREATE TYPE grade_t AS OBJECT(
+  course REF course_t,
+  grade CHAR(2),
+  semester NUMBER,
+  year NUMBER
+)
+/
+
+CREATE TYPE grades_nt AS TABLE OF grade_t
+/
+
+CREATE TYPE student_t AS OBJECT(
+  sid CHAR(10),
+  sname VARCHAR2(50),
+  gpa NUMBER(3,2),
+  grades grades_nt
+)
+/
+
+CREATE TABLE courses OF course_t(
+  cid PRIMARY KEY
+) 
+/
+
+CREATE TABLE students OF student_t(
+  sid PRIMARY KEY
+) NESTED TABLE grades STORE AS grades_table
+/
+
+
+INSERT INTO courses VALUES(course_t( 'DBMS II','Database Management Systems',5))
+/
+INSERT INTO courses VALUES(course_t('SE I','Software Engineering',4))
+/
+
+INSERT INTO students VALUES(student_t('S001','Sampath Wijesinghe',3.4, grades_nt(
+  grade_t((SELECT REF(c) FROM courses c WHERE c.cid = 'DBMS II'),null,2,2006),
+  grade_t((SELECT REF(c) FROM courses c WHERE c.cid = 'SE I'),'B+',1,2005)
+)))
+/
+--a--
+UPDATE TABLE(SELECT s.grades FROM students s WHERE s.sid = 'S001') g
+SET g.grade = 'A'
+WHERE g.course IN (SELECT REF(c) FROM courses c WHERE c.cid = 'DBMS II')
+/
+
+--b--
+SELECT sname 
+FROM students s, TABLE(s.grades) g
+WHERE g.grade='A' AND g.course.cid='DBMS II'
+/
+
+
+--c--
+ALTER TYPE course_t NOT FINAL CASCADE
+/
+
+CREATE TYPE elective_t UNDER course_t(
+  consideredForGPA NUMBER(1)
+) NOT FINAL
+/
+
+
+--d--
+ALTER TYPE student_t ADD MEMBER FUNCTION numAGrades RETURN NUMBER CASCADE
+/
+
+--e--
+CREATE OR REPLACE TYPE BODY student_t AS
+  MEMBER FUNCTION numAGrades RETURN NUMBER IS
+    total NUMBER;
+  BEGIN
+    SELECT COUNT(sid) INTO total
+    FROM TABLE(grades) g
+    WHERE g.grade = 'A';
+    RETURN total;
+  END;
+END;
+/
+
+--f--
+SELECT sname, s.numAGrades() AS numAGrades
+FROM students s
+/
+
+
+
+--g--
+SELECT s.sname, s.gpa
+FROM students s, TABLE(s.grades) g, courses c
+WHERE VALUE(c) IS OF(ONLY elective_t) AND g.course = REF(c)
+GROUP BY s.sname, s.gpa
+/
+
+
+
+
